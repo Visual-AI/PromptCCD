@@ -1,0 +1,93 @@
+CONFIG:
+  run_ccd: True
+  ccd_model: PromptCCD_w_DP_known_K
+  manual_seed: 1
+  save_path: exp/promptccd_w_dp_cub
+  transductive_evaluation: True   
+  eval_version: ccd
+
+DATA:
+  dataset: cub200
+  classes: 200
+  input_size: 224
+  interpolation: 3
+  crop_pct: 0.875
+  labelled_data: 140
+  random_split_ratio: 0.8
+  ccd_split_ratio: [[0.87, 0.54, 0.5, 1.0], [0.7, 0.67, 1.0], [0.9, 1.0], [1.0]]
+  n_stage: 3
+  n_channel: 3
+  n_views: 2
+  use_strong_aug: False
+
+DATALOADER:
+  batch_size: 64 # batch size for training
+  workers: 4 # dataloader workers
+  pin_mem: True
+  shuffle: True
+  val_batch_size: 128
+  val_workers: 0
+  use_sampler: True
+
+OPTIM:
+  epochs: 200
+  optim: SGD
+  base_lr: 0.1
+  use_scheduler: True
+  lr_scheduler: CosineLR
+  power: 0.9
+  momentum: 0.9
+  weight_decay: 0.00005
+  eval_every_n_epoch: 10
+  use_pretrained_model_for_eval: False
+  selected_pretrained_model_for_eval: dino
+  use_gt_for_discovered_data: False
+
+CONTRASTIVE_TRAINING:
+  mini_batch_grouping: False
+  contrast_unlabel_only: False
+  entropy_reg: False
+  enable_density_selection: False
+  density_selection_threshold: 0.2
+  temperature: 1.0 # for info_nce_logits loss func
+  sup_con_weight: [0.35, 0., 0., 0.]
+
+VitModel:
+  grad_from_block: 11
+  feat_dim: 768
+  mlp_out_dim: 65536
+  num_mlp_layers: 3
+  drop_rate: 0.0
+  drop_path: 0.0
+  freeze: ['blocks', 'patch_embed', 'cls_token', 'norm', 'pos_embed']
+
+PROMPT:
+  prompt_length: 5
+  embedding_key: cls
+  prompt_key_init: uniform
+  prompt_pool: True 
+  prompt_key: True
+  pool_size: 10
+  top_k: 5
+  batchwise_prompt: True 
+  head_type: prompt
+  use_prompt_mask: False
+  shared_prompt_pool: True
+  shared_prompt_key: True
+  pull_constraint: True
+  pull_constraint_coeff: 0.1
+  use_g_prompt: True
+  g_prompt_length: 5
+  g_prompt_layer_idx: [0, 1] 
+  use_prefix_tune_for_g_prompt: True
+  use_e_prompt: True
+  e_prompt_layer_idx: [2, 3, 4]
+  use_prefix_tune_for_e_prompt: True
+  same_key_value: False
+
+SSKmeans:
+  max_kmeans_iter: 200
+  k_means_init: 100
+  eval_funcs: ['v2']
+  dino_pretrain_path: 'data/dino_vitbase16_pretrain.pth'
+  warmup_model_dir: data/gcd_dino_best.pt

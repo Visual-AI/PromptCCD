@@ -1,0 +1,83 @@
+CONFIG:
+  run_ccd: True
+  ccd_model: PromptCCD_w_GMP_known_K
+  manual_seed: 1
+  save_path: exp/promptccd_w_gmp_aircraft # path to save model
+  transductive_evaluation: True
+  eval_version: ccd
+
+DATA:
+  dataset: aircraft
+  classes: 100
+  input_size: 224
+  interpolation: 3
+  crop_pct: 0.875
+  labelled_data: 70
+  random_split_ratio: 0.8
+  ccd_split_ratio: [[0.87, 0.54, 0.5, 1.0], [0.7, 0.67, 1.0], [0.9, 1.0], [1.0]]
+  n_stage: 3
+  n_channel: 3
+  n_views: 2
+  use_strong_aug: False
+  
+DATALOADER:
+  batch_size: 128 # batch size for training
+  workers: 4 # dataloader workers
+  pin_mem: True
+  shuffle: True
+  val_batch_size: 256
+  val_workers: 0
+  use_sampler: True
+
+OPTIM:
+  epochs: 200
+  eval_every_n_epoch: 10
+  optim: SGD
+  base_lr: 0.1
+  use_scheduler: True
+  lr_scheduler: CosineLR 
+  power: 0.9
+  momentum: 0.9
+  weight_decay: 0.00005
+  use_pretrained_model_for_eval: False
+  selected_pretrained_model_for_eval: dino
+  use_gt_for_discovered_data: False
+
+CONTRASTIVE_TRAINING:
+  mini_batch_grouping: False
+  contrast_unlabel_only: False
+  entropy_reg: False
+  enable_density_selection: False
+  density_selection_threshold: 0.2
+  temperature: 1.0 # for info_nce_logits loss func
+  sup_con_weight: [0.35, 0., 0., 0.]
+  set_k_half: False
+
+VitModel:
+  use_dinov2: False
+  grad_from_block: 11
+  feat_dim: 768
+  mlp_out_dim: 65536
+  num_mlp_layers: 3
+  drop_rate: 0.0
+  drop_path: 0.0
+  freeze: ['blocks', 'patch_embed', 'cls_token', 'norm', 'pos_embed']
+
+PROMPT:
+  embedding_key: cls
+  prompt_pool: True 
+  generate_gmm_samples: True
+  top_k: 5
+  head_type: prompt
+  fit_gmm_every_n_epoch: 30
+  num_gmm_samples: 100
+  covariance_type: spherical #['full', 'tied', 'diag', 'spherical']
+  convergence_tolerance: 1.0e-7 
+  covariance_regularization: 1.0e-3
+
+SSKmeans:
+  max_kmeans_iter: 200
+  k_means_init: 100
+  eval_funcs: ['v2']
+  dino_pretrain_path: 'data/dino_vitbase16_pretrain.pth'
+  warmup_model_dir: data/gcd_dino_best.pt
