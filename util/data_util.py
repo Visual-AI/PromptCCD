@@ -158,7 +158,7 @@ def load_tiny_imagenet_200(split):
     ########################## DATASET PATH ##########################
     dataset_path = './data/tiny-imagenet-200'
     ########################## DATASET PATH ##########################
-    class_dict_path = os.path.join('config/tiny-imagenet-200/class_dict.txt')
+    class_dict_path = os.path.join('config/tinyimagenet/class_dict.txt')
     with open(class_dict_path, 'r') as f:
         class_dict = f.read()
         class_dict = class_dict.replace("\'", "\"")
