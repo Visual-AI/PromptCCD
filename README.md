@@ -81,8 +81,7 @@ $ CUDA_VISIBLE_DEVICES=%GPU_INDEX% python main.py \
 
 
 ## Acknowledgement
-This repository is built using the [timm](https://github.com/rwightman/pytorch-image-models/tree/master/timm), [DINO](https://github.com/facebookresearch/dino
-), [GCD](https://github.com/sgvaze/generalized-category-discovery), and [GPC](https://github.com/DTennant/GPC) repositories.
+Our code is developed based on [GCD](https://github.com/sgvaze/generalized-category-discovery), and [GPC](https://github.com/DTennant/GPC) repositories.
 
 ## License
 
