@@ -81,7 +81,7 @@ $ CUDA_VISIBLE_DEVICES=%GPU_INDEX% python main.py \
 
 
 ## Acknowledgement
-Our code is developed based on [GCD](https://github.com/sgvaze/generalized-category-discovery), and [GPC](https://github.com/DTennant/GPC) repositories.
+Our code is developed based on [GCD](https://github.com/sgvaze/generalized-category-discovery) and [GPC](https://github.com/DTennant/GPC) repositories.
 
 ## License
 
