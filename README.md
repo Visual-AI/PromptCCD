@@ -1,8 +1,8 @@
 # PromptCCD: Learning Gaussian Mixture Prompt Pool for Continual Category Discovery [ECCV 2024]
 
-[Fernando Julio Cendra<sup>1</sup>](https://scholar.google.com/citations?user=cnChUoEAAAAJ&hl=en),
-[Bingchen Zhao<sup>2</sup>](https://bzhao.me), 
-[Kai Han<sup>1</sup>](https://www.kaihan.org/)
+[Fernando Julio Cendra](https://scholar.google.com/citations?user=cnChUoEAAAAJ&hl=en)<sup>1</sup>,
+[Bingchen Zhao](https://bzhao.me)<sup>2</sup>, 
+[Kai Han](https://www.kaihan.org/)<sup>1</sup>
 
 <sup>1</sup>[Visual AI Lab](https://visailab.github.io/), The University of Hong Kong&nbsp;&nbsp;&nbsp;
 <sup>2</sup>The University of Edinburgh
