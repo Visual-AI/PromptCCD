@@ -4,7 +4,7 @@
 [Bingchen Zhao<sup>2</sup>](https://bzhao.me), 
 [Kai Han<sup>1</sup>](https://www.kaihan.org/)
 
-[<sup>1</sup>Visual AI Lab, The University of Hong Kong](https://visailab.github.io/)&nbsp;&nbsp;&nbsp;
+[<sup>1</sup>Visual AI Lab](https://visailab.github.io/), The University of Hong Kong&nbsp;&nbsp;&nbsp;
 <sup>2</sup>The University of Edinburgh
 
 <a href="https://visual-ai.github.io/promptccd/"><img alt='page' src="https://img.shields.io/badge/Project-Website-blue"></a>
