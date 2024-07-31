@@ -89,7 +89,7 @@ This repository is built using the [timm](https://github.com/rwightman/pytorch-i
 This project is under the CC BY-NC-SA 4.0 license. See [LICENSE](https://creativecommons.org/licenses/by-nc-sa/4.0/) for details.
 
 ## Citation
-```
+```bibtex
 @inproceedings{cendra2024promptccd,
     author    = {Fernando Julio Cendra and Bingchen Zhao and Kai Han},
     title     = {PromptCCD: Learning Gaussian Mixture Prompt Pool for Continual Category Discovery},
