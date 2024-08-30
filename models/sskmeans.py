@@ -48,7 +48,7 @@ def eval_kmeans_semi_sup(args, model, data_loader, stage_i, K=None):
         for batch in tqdm(data_loader, desc=f'Test w/ {args.eval_version} metric', leave=False, bar_format="{desc}{percentage:3.0f}%|{bar}{r_bar}", ncols=80):
             data, label, _, mask_lab_ = batch
        
-            if args.ccd_model == 'PromptCCD_w_GMP_known_K':
+            if args.ccd_model == 'PromptCCD_w_GMP_known_K' or args.ccd_model == 'PromptCCD_w_GMP_unknown_K':
                 feats = model(data.cuda(), task_id=stage_i, res=None)['x'][:, 0]
 
             elif args.ccd_model == 'PromptCCD_w_L2P_known_K' or args.ccd_model == 'PromptCCD_w_DP_known_K': 
@@ -137,7 +137,7 @@ def eval_kmeans(args, model, val_loader, stage_i, epoch=None):
     """
     In this case, the test loader only consists of labelled dataset
     """
-    if args.ccd_model == 'PromptCCD_w_GMP_known_K':
+    if args.ccd_model == 'PromptCCD_w_GMP_known_K' or args.ccd_model == 'PromptCCD_w_GMP_unknown_K':
         model, _ = model
         model.eval()
     
@@ -163,7 +163,7 @@ def eval_kmeans(args, model, val_loader, stage_i, epoch=None):
 
     for data, label, _, _ in tqdm(val_loader, desc=f'Eval @ epoch: {epoch}', leave=False, bar_format="{desc}{percentage:3.0f}%|{bar}{r_bar}", ncols=80):
 
-        if args.ccd_model == 'PromptCCD_w_GMP_known_K':
+        if args.ccd_model == 'PromptCCD_w_GMP_known_K' or args.ccd_model == 'PromptCCD_w_GMP_unknown_K':
             feats = model(data.cuda(), task_id=stage_i, res=None)['x'][:, 0] 
 
         elif args.ccd_model == 'PromptCCD_w_L2P_known_K' or args.ccd_model == 'PromptCCD_w_DP_known_K':            
@@ -225,7 +225,7 @@ def use_pretrained_model(args):
 
 
 def load_finetuned_model(args, model, stage_i):
-    if args.ccd_model == 'PromptCCD_w_GMP_known_K':
+    if args.ccd_model == 'PromptCCD_w_GMP_known_K' or args.ccd_model == 'PromptCCD_w_GMP_unknown_K':
         model, _ = model
         info(f"Use {args.ccd_model} stage {stage_i} model for testing")
         state_dict = torch.load(glob(os.path.join(args.save_path, 'model', f"{args.ccd_model}_stage_{stage_i}_model_best.pt"))[0], map_location='cpu')

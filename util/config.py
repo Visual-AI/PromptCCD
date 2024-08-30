@@ -4,7 +4,6 @@
 import os
 import yaml
 import copy
-from ast import literal_eval
 
 
 class CfgNode(dict):

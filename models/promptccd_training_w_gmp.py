@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# ProCCD model training with Gaussian Mixture Prompt (GMP), known K
+# PromptCCD model training with Gaussian Mixture Prompt (GMP), known K
 # -----------------------------------------------------------------------------
 import os
 from tqdm import tqdm, trange
@@ -30,7 +30,6 @@ class PromptCCD_Model:
             self.gmm_prompt = GMMPrompt(args, int(args.labelled_data))   
         else:
             (self.model, self.projection_head) = model
-            # load best state dict for model and projection_head
             print(f'Loading best model and projection head state dict from stage {self.stage_i - 1}...')
             self.model.load_state_dict(torch.load(os.path.join(args.save_path, 'model', f'{args.ccd_model}_stage_{self.stage_i - 1}_model_best.pt')))
             self.projection_head.load_state_dict(torch.load(os.path.join(args.save_path, 'model', f'{args.ccd_model}_stage_{self.stage_i - 1}_proj_head_best.pt')))
@@ -76,7 +75,6 @@ class PromptCCD_Model:
 
                 class_labels, mask_lab = class_labels.to(device), mask_lab.to(device).bool()
                 images = torch.cat(images, dim=0)
-                images = images.pin_memory()
                 images = images.to(device)
 
                 if epoch >= self.args.fit_gmm_every_n_epoch:
@@ -133,8 +131,8 @@ class PromptCCD_Model:
 
             if epoch % self.args.eval_every_n_epoch == 0:
                 with torch.no_grad():
-                    # we only evaluate on the 'old' classes, to mimic the CCD setting.
-                    all_acc_test, old_acc_test, new_acc_test = eval_kmeans(
+                    # we only evaluate on the 'old' classes, to mimic the CCD setting
+                    _, old_acc_test, _ = eval_kmeans(
                         args=self.args, 
                         model=(self.model, self.gmm_prompt),
                         val_loader=val_loader,

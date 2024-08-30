@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# PromptCCD model training with Prompt Pool (L2P)
+# PromptCCD model training with Gaussian Mixture Prompt (GMP), unknown K
 # -----------------------------------------------------------------------------
 import os
 from tqdm import tqdm, trange
@@ -7,14 +7,30 @@ from tqdm import tqdm, trange
 import torch
 from torch.nn import functional as F
 from torch.optim import SGD, lr_scheduler
+import numpy as np
 
 from util.util import info
 from util.eval_util import AverageMeter
 from models import vision_transformer as vits
-from models.l2p_utils.vision_transformer import vit_base_patch16_224_dino
+from models.promptccd_utils.vision_transformer import vit_base_patch16_224_dino
+from models.promptccd_utils.gmp_unknown_K import GMMPrompt
+from models.promptccd_utils.split_and_merge import split_and_merge_op
 from models.sskmeans import eval_kmeans, eval_kmeans_semi_sup
 
 device = torch.device('cuda:0')
+
+
+def extract_features(model, loader):
+    model.eval()
+    features = []
+    for images, _, _, _ in loader:
+        with torch.no_grad():
+            images = images.cuda(non_blocking=True)
+            feat = model(images)['x'][:, 0]
+            feat = torch.nn.functional.normalize(feat, p=2, dim=-1)
+            features.append(feat.cpu())
+
+    return torch.cat(features, dim=0).cpu()
 
 
 class PromptCCD_Model:
@@ -22,20 +38,20 @@ class PromptCCD_Model:
         super().__init__()
         self.args = args
         self.stage_i = stage_i
+        
         if model == None:
-            self.model, self.original_model, self.projection_head = get_vit_model(args)
+            self.model, self.projection_head = get_vit_model(args)
+            self.gmm_prompt = GMMPrompt(args, int(args.labelled_data))
         else:
-            (self.model, self.original_model, self.projection_head) = model
+            (self.model, self.projection_head, self.gmm_prompt) = model
             print(f'Loading best model and projection head state dict from stage {self.stage_i - 1}...')
             self.model.load_state_dict(torch.load(os.path.join(args.save_path, 'model', f'{args.ccd_model}_stage_{self.stage_i - 1}_model_best.pt')))
             self.projection_head.load_state_dict(torch.load(os.path.join(args.save_path, 'model', f'{args.ccd_model}_stage_{self.stage_i - 1}_proj_head_best.pt')))
 
         self.model_path = os.path.join(args.save_path, 'model')
 
-        self.cur_idx = None
-        self.prev_idx = None
-
     def fit(self, train_loader, val_loader):
+
         optimizer = SGD(
             list(self.projection_head.parameters()) + list(self.model.parameters()), 
             lr=self.args.base_lr, 
@@ -49,66 +65,75 @@ class PromptCCD_Model:
             eta_min=self.args.base_lr * 1e-3,
         )
 
-        # Transfer previous learned prompt params to the new prompt
-        if self.args.prompt_pool and self.args.shared_prompt_pool:
-            if self.stage_i > 0:
-                prev_start = (self.stage_i - 1) * self.args.top_k
-                prev_end = self.stage_i * self.args.top_k
-
-                cur_start = prev_end
-                cur_end = (self.stage_i + 1) * self.args.top_k
-
-                if (prev_end > self.args.pool_size) or (cur_end > self.args.pool_size):
-                    pass
-                else:
-                    self.cur_idx = (slice(cur_start, cur_end))
-                    self.prev_idx = (slice(prev_start, prev_end))
-
-                    with torch.no_grad():
-                        self.model.prompt.prompt[self.cur_idx] = self.model.prompt.prompt[self.prev_idx]
-
-        # Transfer previous learned prompt param keys to the new prompt
-        if self.args.prompt_pool and self.args.shared_prompt_key:
-            if self.stage_i > 0:
-                prev_start = (self.stage_i - 1) * self.args.top_k
-                prev_end = self.stage_i * self.args.top_k
-
-                cur_start = prev_end
-                cur_end = (self.stage_i + 1) * self.args.top_k
-
-                with torch.no_grad():
-                    self.model.prompt.prompt_key[self.cur_idx] = self.model.prompt.prompt_key[self.prev_idx]
-
         sup_con_crit = SupConLoss()
         best_test_acc_lab = 0
+        res = None
 
-        for epoch in trange(self.args.epochs, desc='Epochs', bar_format="{desc}{percentage:3.0f}%|{bar}{r_bar}", ncols=80):
+        if self.stage_i > 0 and self.args.generate_gmm_samples:
+            num_cluster = [self.gmm_prompt.gmm.n_components + self.args.init_components]
+            l_feat = np.load(os.path.join(self.args.save_path, f'gmm/gmm_samples_{self.stage_i-1}.npy'), allow_pickle=True)
+            l_feat = torch.from_numpy(l_feat)
+            l_targets = np.load(os.path.join(self.args.save_path, f'gmm/gmm_pseudo_labels_{self.stage_i-1}.npy'), allow_pickle=True)
+            l_targets = torch.from_numpy(l_targets)
+
+        else:
+            num_cluster = [self.args.labelled_data]
+
+        estimated_gmm_category_numbers = []
+
+        progress = trange(self.args.epochs, desc=f'No. clusters: {self.gmm_prompt.gmm.n_components}; Epochs', bar_format="{desc}{percentage:3.0f}%|{bar}{r_bar}", ncols=80)
+        for epoch in progress:
 
             loss_record = AverageMeter()
             train_acc_record = AverageMeter()
 
+            cluster_result = None
+
+            if epoch >= self.args.warmup_epochs and epoch % self.args.pcl_update_interval == 0:
+                # compute prototype for each class 
+                features = extract_features(self.model, train_loader['default'])
+                features[torch.norm(features,dim=1)>1.5] /= 2 # account for the few samples that are computed twice  
+                u_feat = features
+
+                if self.stage_i == 0: 
+                    cat_feats = features.cuda()
+                    l_feat, l_targets = None, None
+                else:
+                    cat_feats = torch.cat((u_feat, l_feat), dim=0).cuda()
+
+                cluster_result = {'im2cluster':[],'centroids':[],'density':[], 'pi':[], 'cov': []}
+                for idx, _ in enumerate(num_cluster):
+                    cluster_result_, _ = split_and_merge_op(u_feat, l_feat, l_targets, self.args, index=idx, stage=self.stage_i, num_cluster=num_cluster)
+                    cluster_result['im2cluster'].extend(cluster_result_['im2cluster'])
+                    cluster_result['centroids'].extend(cluster_result_['centroids'])
+                    cluster_result['density'].extend(cluster_result_['density'])
+                    cluster_result['pi'].extend(cluster_result_['pi'])
+                    cluster_result['cov'].extend(cluster_result_['cov'])
+                        
+                    # Reparameterize the GMM prompt
+                    self.gmm_prompt.reparameterize(cluster_result, cat_feats)
+                    estimated_gmm_category_numbers.append(self.gmm_prompt.gmm.n_components)
+
             self.projection_head.train()
             self.model.train(True)
-            self.original_model.eval()
 
             for batch in tqdm(train_loader['contrast'], desc='Batches', leave=False, bar_format="{desc}{percentage:3.0f}%|{bar}{r_bar}", ncols=80):
 
-                images, class_labels, uq_idxs, mask_lab = batch
+                images, class_labels, _, mask_lab = batch
                 mask_lab = mask_lab[:, 0]
 
                 class_labels, mask_lab = class_labels.to(device), mask_lab.to(device).bool()
-                images = torch.cat(images, dim=0).to(device)
+                images = torch.cat(images, dim=0)
+                images = images.to(device)
 
-                with torch.no_grad():
-                    if self.original_model is not None:
-                        # Extract features with pretrained model
-                        dino_features = self.original_model(images)['pre_logits']
-                    else:
-                        dino_features = None
+                if epoch >= self.args.warmup_epochs:
+                    with torch.no_grad():
+                        batch_feats = self.model(images, task_id=self.stage_i, res=None)['x'][:, 0]
+                    res = self.gmm_prompt.predict(batch_feats)
 
                 # Extract features with base model
-                output = self.model(images, task_id=self.stage_i, cls_features=dino_features, train=True)
-                features = output['x'][:, 0] #['pre_logits']
+                output = self.model(images, task_id=self.stage_i, res=res)
+                features = output['x'][:, 0] 
 
                 # Pass features through projection head
                 features = self.projection_head(features)
@@ -128,18 +153,17 @@ class PromptCCD_Model:
                 contrastive_logits, contrastive_labels = info_nce_logits(features=con_feats, args=self.args)
                 contrastive_loss = torch.nn.CrossEntropyLoss()(contrastive_logits, contrastive_labels)
 
-                # Supervised contrastive loss
-                f1, f2 = [f[mask_lab] for f in features.chunk(2)]
-                sup_con_feats = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
-                sup_con_labels = class_labels[mask_lab]
-
-                sup_con_loss = sup_con_crit(sup_con_feats, labels=sup_con_labels)
+                # Supervised contrastive loss, during the initial learning on labelled data
+                if self.args.sup_con_weight[self.stage_i] > 0:
+                    f1, f2 = [f[mask_lab] for f in features.chunk(2)]
+                    sup_con_feats = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
+                    sup_con_labels = class_labels[mask_lab]
+                    sup_con_loss = sup_con_crit(sup_con_feats, labels=sup_con_labels)
+                else:
+                    sup_con_loss = 0
 
                 # Total loss
-                loss = ((1 - self.args.sup_con_weight[self.stage_i]) * contrastive_loss) + (self.args.sup_con_weight[self.stage_i] * sup_con_loss)
-
-                if self.args.pull_constraint and 'reduce_sim' in output:
-                    loss = loss - self.args.pull_constraint_coeff * output['reduce_sim']
+                loss = (1 - self.args.sup_con_weight[self.stage_i]) * contrastive_loss + self.args.sup_con_weight[self.stage_i] * sup_con_loss
 
                 # Train acc
                 _, pred = contrastive_logits.max(1)
@@ -159,7 +183,7 @@ class PromptCCD_Model:
                     # we only evaluate on the 'old' classes, to mimic the CCD setting
                     _, old_acc_test, _ = eval_kmeans(
                         args=self.args, 
-                        model=(self.model, self.original_model),
+                        model=(self.model, self.gmm_prompt),
                         val_loader=val_loader,
                         stage_i=self.stage_i,
                         epoch=epoch,
@@ -167,21 +191,28 @@ class PromptCCD_Model:
 
                 # ----------------
                 # LOG
-                # ----------------
+                # ----------------                
                 torch.save(self.model.state_dict(), os.path.join(self.model_path, f'{self.args.ccd_model}_stage_{self.stage_i}_model.pt'))
                 torch.save(self.projection_head.state_dict(), os.path.join(self.model_path,f'{self.args.ccd_model}_stage_{self.stage_i}_model_proj_head.pt'))
 
                 if old_acc_test > best_test_acc_lab:
                     torch.save(self.model.state_dict(), os.path.join(self.model_path, f'{self.args.ccd_model}_stage_{self.stage_i}_model_best.pt'))
                     torch.save(self.projection_head.state_dict(), os.path.join(self.model_path, f'{self.args.ccd_model}_stage_{self.stage_i}_proj_head_best.pt'))
+                    torch.save(cluster_result, os.path.join(self.args.save_path, 'gmm', f'{self.args.ccd_model}_stage_{self.stage_i}_prototype.pth'))
                     best_test_acc_lab = old_acc_test
+            
+            progress.set_description(f"No. clusters: {self.gmm_prompt.gmm.n_components}; Epochs")
 
-        return self.model, self.original_model, self.projection_head
+        # save estimated number of clusters list in txt
+        np.savetxt(os.path.join(self.args.save_path, f'gmm/estimated_gmm_category_numbers_{self.stage_i}.txt'), estimated_gmm_category_numbers, fmt='%d')
+
+        return self.model, self.projection_head, self.gmm_prompt
 
     def eval(self, test_loader):
+        self.model.eval()
         all_acc, old_acc, new_acc = eval_kmeans_semi_sup(
             args=self.args, 
-            model=(self.model, self.original_model),
+            model=(self.model, self.gmm_prompt),
             data_loader=test_loader, 
             stage_i=self.stage_i, 
             K=None,
@@ -317,40 +348,14 @@ def get_vit_model(args):
 
     args.interpolation = 3
     args.crop_pct = 0.875
-
-    original_model = vit_base_patch16_224_dino(
-        pretrained=True, 
-        num_classes=0, 
-        prompt_length=args.prompt_length,
-        embedding_key=args.embedding_key,
-        prompt_init=args.prompt_key_init,
-        prompt_pool=args.prompt_pool,
-        prompt_key=args.prompt_key,
-        pool_size=args.pool_size,
-        top_k=args.top_k,
-        batchwise_prompt=args.batchwise_prompt,
-        prompt_key_init=args.prompt_key_init,
-        head_type=args.head_type,
-        use_prompt_mask=args.use_prompt_mask,
-    )
-
     model = vit_base_patch16_224_dino(
         pretrained=True, 
         num_classes=0, 
-        prompt_length=args.prompt_length,
         embedding_key=args.embedding_key,
-        prompt_init=args.prompt_key_init,
         prompt_pool=args.prompt_pool,
-        prompt_key=args.prompt_key,
-        pool_size=args.pool_size,
         top_k=args.top_k,
-        batchwise_prompt=args.batchwise_prompt,
-        prompt_key_init=args.prompt_key_init,
         head_type=args.head_type,
-        use_prompt_mask=args.use_prompt_mask,
     )
-
-    original_model.to(device)
     model.to(device)
 
     # NOTE: Hardcoded image size as we do not finetune the entire ViT model
@@ -362,9 +367,6 @@ def get_vit_model(args):
     # ----------------------
     # HOW MUCH OF BASE MODEL TO FINETUNE
     # ----------------------
-    for m in original_model.parameters():
-        m.requires_grad = False
-
     for n, p in model.named_parameters():
         if n.startswith(tuple(args.freeze)):
             p.requires_grad = False
@@ -381,4 +383,4 @@ def get_vit_model(args):
 
     projection_head.to(device)
 
-    return model, original_model, projection_head
+    return model, projection_head

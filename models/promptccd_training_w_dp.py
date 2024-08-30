@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# ProCCD model training with DualPrompt (DP)
+# PromptCCD model training with DualPrompt (DP)
 # -----------------------------------------------------------------------------
 import os
 from tqdm import tqdm, trange
@@ -54,14 +54,12 @@ class PromptCCD_Model:
             if self.stage_i > 0:
                 prev_start = (self.stage_i - 1) * self.args.top_k
                 prev_end = self.stage_i * self.args.top_k
-
                 cur_start = prev_end
                 cur_end = (self.stage_i + 1) * self.args.top_k
 
                 with torch.no_grad():
                     self.model.e_prompt.prompt_key[self.cur_idx] = self.model.e_prompt.prompt_key[self.prev_idx]
                     optimizer.param_groups[0]['params'] = self.model.parameters()
-        
 
         sup_con_crit = SupConLoss()
         best_test_acc_lab = 0
@@ -138,14 +136,11 @@ class PromptCCD_Model:
 
             # Step schedule
             exp_lr_scheduler.step()
-            print('Train Epoch: {} Avg Loss: {:.4f} | Seen Class Acc: {:.4f} '.format(epoch, loss_record.avg,
-                                                                                    train_acc_record.avg))
 
             if epoch % self.args.eval_every_n_epoch == 0:
                 with torch.no_grad():
-
-                    print('Testing on disjoint test set...')
-                    all_acc_test, old_acc_test, new_acc_test = eval_kmeans(
+                    # we only evaluate on the 'old' classes, to mimic the CCD setting
+                    _, old_acc_test, _ = eval_kmeans(
                         args=self.args, 
                         model=(self.model, self.original_model),
                         val_loader=val_loader,
@@ -165,7 +160,6 @@ class PromptCCD_Model:
                     best_test_acc_lab = old_acc_test
 
         return self.model, self.original_model, self.projection_head
-        
 
     def eval(self, test_loader):
         all_acc, old_acc, new_acc = eval_kmeans_semi_sup(

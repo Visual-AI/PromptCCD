@@ -2,12 +2,11 @@
 # Functions for evaluation utility
 # -----------------------------------------------------------------------------
 import os
+from typing import List
 
-import torch
 import numpy as np
 from scipy.optimize import linear_sum_assignment as linear_assignment
 from torch.utils.tensorboard import SummaryWriter
-from typing import List
 
 
 class AverageMeter(object):

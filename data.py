@@ -155,6 +155,7 @@ def create_dataloader(args, dataset_i, stage_i):
             dataset_i,
             batch_size=args.val_batch_size,
             num_workers=args.val_workers,
+            pin_memory=args.pin_mem,
             shuffle=False
         )       
         return dataloader
