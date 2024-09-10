@@ -72,10 +72,6 @@ class GMMPrompt():
         results = self.gmm.predict_proba(batch)                     # Batch, num_components
         _, idx = torch.topk(results, k=self.args.top_k, dim=1)      # Batch, top_k
 
-        ############
-        # Random pick k components
-        # idx = torch.randint(0, self.num_components, (batch.shape[0], self.args.top_k)).to(device)
-        ############
         idx = idx.squeeze(1)                                        # Batch
         res['batched_prompt'] = self.gmm.model_.means[idx]          # Batch, topk, emb_dim
         res['prompt_idx'] = idx

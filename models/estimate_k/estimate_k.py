@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Functions for estimating K using GCD method
+# Please refer to the original implementation for more details
 # -----------------------------------------------------------------------------
 import torch
 import numpy as np
@@ -20,11 +21,9 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 device = torch.device('cuda:0')
 
 def test_kmeans(K, merge_test_loader, args=None, verbose=False):
-
     """
     In this case, the test loader needs to have the labelled and unlabelled subsets of the training data
     """
-
     if K is None:
         K = args.labelled_data + args.num_unlabeled_classes
 
@@ -84,10 +83,7 @@ def test_kmeans(K, merge_test_loader, args=None, verbose=False):
         print('Unlabelled Instances acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(unlabelled_acc, unlabelled_nmi,
                                                                                unlabelled_ari))
 
-    # labelled_acc = DUMMY_ACCS[K - 1].item()
-
     return labelled_acc
-    # return (labelled_acc, labelled_nmi, labelled_ari), (unlabelled_acc, unlabelled_nmi, unlabelled_ari), mask.astype(float).mean()
 
 
 def test_kmeans_for_scipy(K, merge_test_loader, args=None, verbose=False):
@@ -137,8 +133,6 @@ def test_kmeans_for_scipy(K, merge_test_loader, args=None, verbose=False):
     # EVALUATE
     # -----------------------
     mask = mask_lab
-
-
     labelled_acc, labelled_nmi, labelled_ari = cluster_acc(targets.astype(int)[mask], preds.astype(int)[mask]), \
                                                nmi_score(targets[mask], preds[mask]), \
                                                ari_score(targets[mask], preds[mask])

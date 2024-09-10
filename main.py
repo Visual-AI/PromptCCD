@@ -21,7 +21,7 @@ def get_parser():
     Input: takes arguments from yaml config file located in config/$DATASET$/*.yaml
     Return: a dict with key for argument query
     '''
-    parser = argparse.ArgumentParser(description='PyTorch implementation of ProCCD')
+    parser = argparse.ArgumentParser(description='PyTorch implementation of PromptCCD framework')
     parser.add_argument('--exp_name', type=str, default='ViT_ssk', help='To differentiate each experiments')
     parser.add_argument('--config', type=str, default=None, help='config file')
     parser.add_argument('--train', action=argparse.BooleanOptionalAction, default=False)
@@ -43,12 +43,6 @@ def get_parser():
     return cfg, args.config
 
 
-def set_debug_apis(state: bool = False):
-    torch.autograd.profiler.profile(enabled=state)
-    torch.autograd.profiler.emit_nvtx(enabled=state)
-    torch.autograd.set_detect_anomaly(mode=state)
-
-
 def main():
     args, config_path = get_parser()
 
@@ -64,6 +58,12 @@ def main():
         RunContinualTrainer(args, datasets_train, datasets_val, datasets_test)
 
     util.info("Program finished ...")
+
+
+def set_debug_apis(state: bool = False):
+    torch.autograd.profiler.profile(enabled=state)
+    torch.autograd.profiler.emit_nvtx(enabled=state)
+    torch.autograd.set_detect_anomaly(mode=state)
 
 
 if __name__ == "__main__":
