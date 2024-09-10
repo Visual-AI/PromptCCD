@@ -169,8 +169,6 @@ class PromptCCD_Model:
             stage_i=self.stage_i, 
             K=None,
         )
-        if self.args.test:
-            info(f'All Acc: {all_acc:.4f} | Old Acc: {old_acc:.4f} | New Acc: {new_acc:.4f}')
 
 
 class SupConLoss(torch.nn.Module):

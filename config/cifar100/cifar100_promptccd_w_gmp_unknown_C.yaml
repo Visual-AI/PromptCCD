@@ -30,7 +30,7 @@ DATALOADER:
   use_sampler: True
 
 OPTIM:
-  epochs: 200
+  epochs: 100
   optim: SGD
   base_lr: 0.1
   use_scheduler: True

@@ -210,15 +210,22 @@ class PromptCCD_Model:
 
     def eval(self, test_loader):
         self.model.eval()
+
+        if self.args.test:
+            # retrieve the estimated K from the GMM prompt
+            estimated_k = np.loadtxt(os.path.join(self.args.save_path, f'gmm/estimated_gmm_category_numbers_{self.stage_i}.txt'))
+            K = int(estimated_k[-1])
+
+        else:
+            K = self.gmm_prompt.gmm.n_components
+
         all_acc, old_acc, new_acc = eval_kmeans_semi_sup(
             args=self.args, 
             model=(self.model, self.gmm_prompt),
             data_loader=test_loader, 
             stage_i=self.stage_i, 
-            K=None,
+            K=K,
         )
-        if self.args.test:
-            info(f'All Acc: {all_acc:.4f} | Old Acc: {old_acc:.4f} | New Acc: {new_acc:.4f}')
 
 
 class SupConLoss(torch.nn.Module):

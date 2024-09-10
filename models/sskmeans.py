@@ -28,6 +28,7 @@ def eval_kmeans_semi_sup(args, model, data_loader, stage_i, K=None):
         _, original_model = model
         original_model = original_model.cuda()
 
+    # Get the ground truth number of classes for this stage when K is not provided, i.e, when K is known
     if K is None:
         K = int(args.labelled_data + (stage_i * ((args.classes - args.labelled_data) // args.n_stage)))
 
@@ -117,6 +118,7 @@ def eval_kmeans_semi_sup(args, model, data_loader, stage_i, K=None):
             print_output=True, 
             indicator=f"SS-Kmeans_test_stage_{stage_i}_w_{args.eval_version}_metrics",
         )
+        info(f'All Acc: {all_acc:.4f} | Old Acc: {old_acc:.4f} | New Acc: {new_acc:.4f}')
     
     # -----------------------
     # SAVE UNLABELLED PREDS
