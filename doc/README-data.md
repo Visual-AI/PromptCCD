@@ -56,6 +56,9 @@ This README provides guidelines on how to prepare and structure the datasets. In
 #### Fine-grained datasets, *e.g.*, Aircraft, Stanford Cars, and CUB
 Please follow the instruction [here](https://github.com/sgvaze/SSB/blob/main/DATA.md) to download these datasets.
 
+*For Stanford Cars [devkit folder](https://github.com/Visual-AI/PromptCCD/blob/d13db371fe6a3990b93510e0f507734736648096/util/data_util.py#L276), please download it [here](https://github.com/pytorch/vision/files/11644847/car_devkit.tgz), and extract it inside the `stanford_car` folder.
+
+
 ## Setup
 
 Create `data` directory and attached symbolic links between the dataset paths and `data` dir. This can be done by:
