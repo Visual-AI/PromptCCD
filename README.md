@@ -51,7 +51,7 @@ $ CUDA_VISIBLE_DEVICES=%GPU_INDEX% python main.py \
 --train
 ```
  The training script will generate a directory in `exp/%SAVE_PATH%` where `%SAVE_PATH%` can be specified in the `"configs/%DATASET%/*.yaml"` file. 
- All of the necessary outputs, e.g., training ckpt, learned gmm for each stage, and experiment results are stored inside the directory. 
+ All necessary outputs, e.g., training ckpt, learned gmm for each stage, and experiment results, are stored inside the directory. 
  
  The file structure should be:
 ```
@@ -78,7 +78,13 @@ $ CUDA_VISIBLE_DEVICES=%GPU_INDEX% python main.py \
 --config "exp/%SAVE_PATH%/*.yaml" \
 --test
 ```
+*To obtain the overall Average *ACC* results, you need to average the CCD results from all stages as indicated in your test logs. For example:
 
+`All Acc: 0.7387 | Old Acc: 0.8102 | New Acc: 0.6886 <-- log_SS-Kmeans_test_stage_1_w_ccd_metrics.txt` \
+`All Acc: 0.6389 | Old Acc: 0.7190 | New Acc: 0.6236 <-- log_SS-Kmeans_test_stage_2_w_ccd_metrics.txt` \
+`All Acc: 0.5830 | Old Acc: 0.7095 | New Acc: 0.5608 <-- log_SS-Kmeans_test_stage_3_w_ccd_metrics.txt`
+
+The Average *ACC*: `All Avg. Acc: 65.35 | Old Avg. Acc: 74.62 | New Avg. Acc: 62.43`
 
 ## Acknowledgement
 Our code is developed based on [GCD](https://github.com/sgvaze/generalized-category-discovery) and [GPC](https://github.com/DTennant/GPC) repositories.
