@@ -1,6 +1,6 @@
 # PromptCCD: Learning Gaussian Mixture Prompt Pool for Continual Category Discovery [ECCV 2024]
 
-[Fernando Julio Cendra](https://scholar.google.com/citations?user=cnChUoEAAAAJ&hl=en)<sup>1</sup>,
+[Fernando Julio Cendra](https://fcendra.github.io)<sup>1</sup>,
 [Bingchen Zhao](https://bzhao.me)<sup>2</sup>, 
 [Kai Han](https://www.kaihan.org/)<sup>1</sup>
 
@@ -92,7 +92,7 @@ This project is under the CC BY-NC-SA 4.0 license. See [LICENSE](https://creativ
 @inproceedings{cendra2024promptccd,
     author    = {Fernando Julio Cendra and Bingchen Zhao and Kai Han},
     title     = {PromptCCD: Learning Gaussian Mixture Prompt Pool for Continual Category Discovery},
-    booktitle = {European Conference on Computer Vision},
+    booktitle = {European Conference on Computer Vision (ECCV)},
     year      = {2024}
 }
 ```
