@@ -80,9 +80,9 @@ $ CUDA_VISIBLE_DEVICES=%GPU_INDEX% python main.py \
 ```
 *To obtain the overall Average *ACC* results, you need to average the CCD results from all stages as indicated in your test logs. For example:
 
-`All Acc: 0.7387 | Old Acc: 0.8102 | New Acc: 0.6886 <-- log_SS-Kmeans_test_stage_1_w_ccd_metrics.txt` \
-`All Acc: 0.6389 | Old Acc: 0.7190 | New Acc: 0.6236 <-- log_SS-Kmeans_test_stage_2_w_ccd_metrics.txt` \
-`All Acc: 0.5830 | Old Acc: 0.7095 | New Acc: 0.5608 <-- log_SS-Kmeans_test_stage_3_w_ccd_metrics.txt`
+`All Acc: 0.7387 | Old Acc: 0.8102 | New Acc: 0.6886 <-- stage 1` \
+`All Acc: 0.6389 | Old Acc: 0.7190 | New Acc: 0.6236 <-- stage 2` \
+`All Acc: 0.5830 | Old Acc: 0.7095 | New Acc: 0.5608 <-- stage 3`
 
 The Average *ACC*: `All Avg. Acc: 65.35 | Old Avg. Acc: 74.62 | New Avg. Acc: 62.43`
 
